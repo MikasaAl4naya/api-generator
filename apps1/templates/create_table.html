@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Create Data Table</title>
+</head>
+<body>
+	<h1>Create Data Table</h1>
+	<form method="POST" action="{% url 'create_table' %}">
+		{% csrf_token %}
+		<label for="num_cols">Number of Columns:</label>
+		<input type="number" name="num_cols" id="num_cols" required><br><br>
+		{% for i in 1|range:num_cols %}
+		<label for="col{{i}}_name">Column {{i}} Name:</label>
+		<input type="text" name="col{{i}}_name" id="col{{i}}_name" required>
+		<label for="col{{i}}_type">Column {{i}} Type:</label>
+		<select name="col{{i}}_type" id="col{{i}}_type" required>
+			<option value="">Select a Type</option>
+			<option value="Auto-increment">Auto-increment</option>
+			<option value="First Name">First Name</option>
+			<option value="Last Name">Last Name</option>
+			<option value="Country">Country</option>
+			<option value="Random Number">Random Number</option>
+			<option value="Email">Email</option>
+			<option value="Username">Username</option>
+			<option value="Date">Date</option>
+			<option value="SNILS">SNILS</option>
+		</select><br><br>
+		{% endfor %}
+		<input type="submit" value="Create Table">
+	</form>
+</body>
+</html>
