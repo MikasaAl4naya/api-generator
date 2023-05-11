@@ -3,6 +3,7 @@ import io
 from datetime import datetime
 from django.http import HttpResponse
 from django.shortcuts import render
+from faker.generator import random
 from mimesis import Generic, Datetime
 from mimesis.enums import Gender
 from rest_framework.views import APIView
@@ -13,17 +14,16 @@ import re
 from mimesis.enums import CardType
 from faker import Faker
 
-fake = Faker('ru_RU')
+
 g = Generic()
-
-
+dt = Datetime('ru')
+fake = Faker('ru_RU')
 def get_gender_from_name(name):
     if re.search('[а-яА-Я]*[аоуыэяюёе]$', name):
         return ("Жен.")
     else:
         return ("Муж.")
-g = Generic('ru')
-dt = Datetime('ru')
+
 class DatasetApiView(APIView):
     def get(self, request):
         d = DatasetModel.objects.all()
@@ -31,6 +31,7 @@ class DatasetApiView(APIView):
 
 
     def post(self, request):
+
         # Получаем данные из запроса
         title = request.data.get('title')
         num_rows = int(request.data.get('num_rows', 0))  # количество строк
@@ -49,6 +50,47 @@ class DatasetApiView(APIView):
             }
             columns.append(column)
 
+        def generate_prices():
+            price_int = random.randint(100, 1000)
+            currency = 'RUB'
+            price_str = str(price_int)
+            return "{} {}".format(price_str, currency)
+
+        def generate_contractors(num_rows):
+            contractors = []
+            for _ in range(num_rows):
+                contractor = {
+                    'name': fake.company(),
+                    'inn': fake.random_number(digits=10),
+                    'kpp': fake.random_number(digits=9),
+                    'address': fake.address(),
+                    'phone': fake.phone_number()
+                }
+                contractors.append(contractor)
+            return contractors
+        def generate_contracts():
+            contract = {}
+            contract['id'] = i + 1
+            contract['supplier'] = fake.company()
+            contract['customer'] = fake.company()
+            contract['product'] = fake.word()
+            contract['price'] = round(random.uniform(100, 1000), 2)
+            contract['quantity'] = random.randint(1, 100)
+            contract['delivery_date'] = fake.date_between(start_date='-1y', end_date='+1y').strftime('%Y-%m-%d')
+            contract['status'] = random.choice(['draft', 'active', 'expired'])
+            return contract
+        def generate_financial_data():
+            data = {}
+            transaction_type = random.choice(['expense', 'income'])
+            amount = round(random.uniform(10.0, 10000.0), 2)
+            date = fake.date_between(start_date='-1y', end_date='today')
+            description = fake.text(max_nb_chars=50)
+            data['transaction_type']= transaction_type
+            data['amount']= amount
+            data['date']= date
+            data['description']= description
+            return data
+
         # Генерируем таблицу
         data = []
         for i in range(num_rows):
@@ -61,8 +103,16 @@ class DatasetApiView(APIView):
                     row[name] = i + 1
                 elif dtype == 'First Name':
                     row[name] = first_name
+                elif dtype == 'Contracts':
+                    row[name] = generate_contracts()
                 elif dtype == 'Last Name':
                     row[name] = g.person.last_name()
+                elif dtype == 'Financial Data':
+                    row[name] = generate_financial_data()
+                elif dtype == 'Prices':
+                    row[name] = generate_prices()
+                elif dtype == 'Сontractors':
+                    row[name] = generate_contractors(1)
                 elif dtype == 'Gender':
                     row[name] = str(get_gender_from_name(first_name))
                 elif dtype == 'Phone Number':
@@ -86,7 +136,14 @@ class DatasetApiView(APIView):
                     row[name] = datetime.strptime(date_str, "%Y-%m-%d")
                 elif dtype == 'SNILS':
                     row[name] = fake.ssn()
+                elif dtype == 'Full Name':
+                    row[name] = f"{row['First Name']} {row['Last Name']}"
+                elif dtype == 'Address':
+                    row[name] = fake.address()
+                elif dtype == 'Age':
+                    row[name] = g.random.randint(18, 70)
             data.append(row)
+
 
         # Сохраняем таблицу в базу данных
         dataset = DatasetModel.objects.create(
@@ -153,43 +210,3 @@ class DatasetApiView(APIView):
                         name=col_name,
                         value=col_value
                     )
-    # def put(self, request, *args, **kwargs):
-    #     pk = kwargs.get('pk', None)
-    #     if not pk:
-    #         return Response({"error":"Method PUT not allowed"})
-    #
-    #     try:
-    #         instance = DatasetModel.objects.get(pk=pk)
-    #     except:
-    #         return Response({"error":"Object does not exist"})
-    #
-    #     serializer = DatasetSerializer(data=request.data,instance=instance)
-    #     serializer.is_valid(raise_exception=True)
-    #     serializer.save()
-    #     return Response({"post": serializer.data})
-
-        # post_new = DatasetModel.objects.create(
-        #     title=request.data['title'],
-        #     num_rows = request.data['num_rows'],
-        #     num_columns = request.data['num_columns']
-        # )
-    # def put(self, request, *args, **kwargs):
-    #     pk = kwargs.get('pk', None)
-    #     if not pk:
-    #         return Response({"error":"Method PUT not allowed"})
-    #
-    #     try:
-    #         instance = DatasetModel.objects.get(pk=pk)
-    #     except:
-    #         return Response({"error":"Object does not exist"})
-    #
-    #     serializer = DatasetSerializer(data=request.data,instance=instance)
-    #     serializer.is_valid(raise_exception=True)
-    #     serializer.save()
-    #     return Response({"post": serializer.data})
-
-
-
-# class DatasetApiView(generics.ListAPIView):
-#     queryset = DatasetModel.objects.all()
-#     serializer_class = DatasetSerializer
